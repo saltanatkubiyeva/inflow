@@ -22,7 +22,7 @@ Inflow is a web application for HR managers to track candidates, vacancies, inte
 |------|------|
 | Saltanat Kubiyeva | Feedback & Dashboard |
 | Alua Kudaibergenova | Vacancies & Interviews |
-| Akmaral Gaukarbek | Candidates (CRUD) & Authentication |
+| Denis Tursynbayev | Candidates (CRUD) & Authentication |
 
 ## Project Structure
 
