@@ -1,4 +1,4 @@
-import { NgModule, Component, OnInit } from '@angular/core';
+import { NgModule, Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -302,7 +302,7 @@ export class InterviewsComponent implements OnInit {
   fForm: Partial<Feedback> = {};
   viewingFeedback: Feedback | null = null;
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private zone: NgZone, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.loadData();
@@ -311,10 +311,41 @@ export class InterviewsComponent implements OnInit {
   loadData(): void {
     this.loading = true;
     this.api.getInterviews().subscribe({
-      next: data => { this.interviews = data; this.applyFilters(); this.loading = false; },
-      error: () => { this.error = 'Failed to load interviews.'; this.loading = false; }
+      next: data => {
+        this.zone.run(() => {
+          try {
+            console.log('Received data:', data);
+            this.interviews = Array.isArray(data) ? data : ((data as { results?: Interview[] })?.results ?? []);
+            this.applyFilters();
+          } finally {
+            this.loading = false;
+            this.cdr.detectChanges();
+          }
+        });
+      },
+      error: () => {
+        this.zone.run(() => {
+          this.error = 'Failed to load interviews.';
+          this.loading = false;
+          this.cdr.detectChanges();
+        });
+      }
     });
-    this.api.getCandidates().subscribe({ next: c => this.candidates = c });
+    this.api.getCandidates().subscribe({
+      next: c => {
+        this.zone.run(() => {
+          console.log('Received data:', c);
+          this.candidates = Array.isArray(c) ? c : ((c as { results?: Candidate[] })?.results ?? []);
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => {
+        this.zone.run(() => {
+          this.candidates = [];
+          this.cdr.detectChanges();
+        });
+      }
+    });
   }
 
   applyFilters(): void {
@@ -344,31 +375,50 @@ export class InterviewsComponent implements OnInit {
     this.iSaving = true;
     this.api.createInterview(this.iForm).subscribe({
       next: saved => {
+        console.log('Received data:', saved);
         this.interviews.unshift(saved);
         this.applyFilters();
         this.iSaving = false;
         this.closeInterviewForm();
+        this.cdr.detectChanges();
       },
-      error: () => { this.iFormError = 'Failed to schedule.'; this.iSaving = false; }
+      error: () => {
+        this.iFormError = 'Failed to schedule.';
+        this.iSaving = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
   markCompleted(i: Interview): void {
     this.api.updateInterview(i.id, { status: 'completed' }).subscribe({
       next: updated => {
+        console.log('Received data:', updated);
         const idx = this.interviews.findIndex(x => x.id === i.id);
         if (idx !== -1) this.interviews[idx] = updated;
         this.applyFilters();
+        this.cdr.detectChanges();
       },
-      error: () => this.error = 'Failed to update.'
+      error: () => {
+        this.error = 'Failed to update.';
+        this.cdr.detectChanges();
+      }
     });
   }
 
   deleteInterview(i: Interview): void {
     if (!confirm(`Delete interview with ${i.candidate_name}?`)) return;
     this.api.deleteInterview(i.id).subscribe({
-      next: () => { this.interviews = this.interviews.filter(x => x.id !== i.id); this.applyFilters(); },
-      error: () => this.error = 'Failed to delete.'
+      next: () => {
+        console.log('Received data:', { deletedId: i.id });
+        this.interviews = this.interviews.filter(x => x.id !== i.id);
+        this.applyFilters();
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.error = 'Failed to delete.';
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -389,23 +439,34 @@ export class InterviewsComponent implements OnInit {
     this.fSaving = true;
     this.api.createFeedback(this.fForm).subscribe({
       next: () => {
+        console.log('Received data:', this.fForm);
         const idx = this.interviews.findIndex(x => x.id === this.feedbackInterview?.id);
         if (idx !== -1) this.interviews[idx].has_feedback = true;
         this.applyFilters();
         this.fSaving = false;
         this.closeFeedbackForm();
+        this.cdr.detectChanges();
       },
-      error: () => { this.fFormError = 'Failed to save feedback.'; this.fSaving = false; }
+      error: () => {
+        this.fFormError = 'Failed to save feedback.';
+        this.fSaving = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
   viewFeedback(i: Interview): void {
     this.api.getFeedback(i.candidate).subscribe({
       next: feedbacks => {
+        console.log('Received data:', feedbacks);
         const fb = feedbacks.find(f => f.interview === i.id);
         if (fb) this.viewingFeedback = fb;
+        this.cdr.detectChanges();
       },
-      error: () => this.error = 'Failed to load feedback.'
+      error: () => {
+        this.error = 'Failed to load feedback.';
+        this.cdr.detectChanges();
+      }
     });
   }
 }

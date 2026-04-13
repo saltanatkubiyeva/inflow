@@ -1,4 +1,4 @@
-import { NgModule, Component, OnInit } from '@angular/core';
+import { NgModule, Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
@@ -19,7 +19,7 @@ import { DashboardStats, PipelineSummary } from '../../shared/models';
       <div class="error-banner">{{ error }}</div>
       }
 
-      @if (stats) {
+      @if (!loading && stats) {
       <div class="stats-row">
         <div class="stat-card">
           <span class="stat-value">{{ stats?.total_candidates }}</span>
@@ -40,7 +40,7 @@ import { DashboardStats, PipelineSummary } from '../../shared/models';
       </div>
       }
 
-      @if (stats) {
+      @if (!loading && stats) {
       <div class="pipeline-section">
         <h2>Candidate Pipeline</h2>
         <div class="pipeline-track">
@@ -59,7 +59,7 @@ import { DashboardStats, PipelineSummary } from '../../shared/models';
       </div>
       }
 
-      @if (stats) {
+      @if (!loading && stats) {
       <div class="two-col">
         <div class="card">
           <div class="card-header">
@@ -106,6 +106,10 @@ import { DashboardStats, PipelineSummary } from '../../shared/models';
       </div>
       }
 
+      @if (!loading && !stats && !error) {
+      <div class="empty-state">No dashboard data available.</div>
+      }
+
       @if (loading) {
       <div class="loading">Loading dashboard…</div>
       }
@@ -126,12 +130,39 @@ export class DashboardComponent implements OnInit {
     { key: 'rejected', label: 'Rejected' },
   ] as { key: keyof PipelineSummary, label: string }[];
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private zone: NgZone, private cdr: ChangeDetectorRef) {}
+
+  private normalizeDashboard(data: unknown): DashboardStats | null {
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      const obj = data as Record<string, unknown>;
+      if (obj['results'] && typeof obj['results'] === 'object' && !Array.isArray(obj['results'])) {
+        return obj['results'] as DashboardStats;
+      }
+      return data as unknown as DashboardStats;
+    }
+    return null;
+  }
 
   ngOnInit(): void {
     this.api.getDashboard().subscribe({
-      next: data => { this.stats = data; this.loading = false; },
-      error: () => { this.error = 'Failed to load dashboard.'; this.loading = false; }
+      next: data => {
+        this.zone.run(() => {
+          try {
+            console.log('Received data:', data);
+            this.stats = this.normalizeDashboard(data);
+          } finally {
+            this.loading = false;
+            this.cdr.detectChanges();
+          }
+        });
+      },
+      error: () => {
+        this.zone.run(() => {
+          this.error = 'Failed to load dashboard.';
+          this.loading = false;
+          this.cdr.detectChanges();
+        });
+      }
     });
   }
 

@@ -1,4 +1,4 @@
-import { NgModule, Component, OnInit } from '@angular/core';
+import { NgModule, Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe, SlicePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -179,15 +179,31 @@ export class VacanciesComponent implements OnInit {
   formError = '';
   form: Partial<Vacancy> = {};
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private zone: NgZone, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void { this.loadVacancies(); }
 
   loadVacancies(): void {
     this.loading = true;
     this.api.getVacancies(this.statusFilter || undefined).subscribe({
-      next: data => { this.vacancies = data; this.loading = false; },
-      error: () => { this.error = 'Failed to load vacancies.'; this.loading = false; }
+      next: data => {
+        this.zone.run(() => {
+          try {
+            console.log('Received data:', data);
+            this.vacancies = Array.isArray(data) ? data : ((data as { results?: Vacancy[] })?.results ?? []);
+          } finally {
+            this.loading = false;
+            this.cdr.detectChanges();
+          }
+        });
+      },
+      error: () => {
+        this.zone.run(() => {
+          this.error = 'Failed to load vacancies.';
+          this.loading = false;
+          this.cdr.detectChanges();
+        });
+      }
     });
   }
 
@@ -212,6 +228,7 @@ export class VacanciesComponent implements OnInit {
 
     req.subscribe({
       next: saved => {
+        console.log('Received data:', saved);
         if (this.editing) {
           const idx = this.vacancies.findIndex(v => v.id === saved.id);
           if (idx !== -1) this.vacancies[idx] = saved;
@@ -220,8 +237,13 @@ export class VacanciesComponent implements OnInit {
         }
         this.saving = false;
         this.closeForm();
+        this.cdr.detectChanges();
       },
-      error: () => { this.formError = 'Failed to save.'; this.saving = false; }
+      error: () => {
+        this.formError = 'Failed to save.';
+        this.saving = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -231,10 +253,16 @@ export class VacanciesComponent implements OnInit {
     if (!this.deleteTarget) return;
     this.api.deleteVacancy(this.deleteTarget.id).subscribe({
       next: () => {
+        console.log('Received data:', { deletedId: this.deleteTarget?.id });
         this.vacancies = this.vacancies.filter(v => v.id !== this.deleteTarget!.id);
         this.deleteTarget = null;
+        this.cdr.detectChanges();
       },
-      error: () => { this.error = 'Failed to delete.'; this.deleteTarget = null; }
+      error: () => {
+        this.error = 'Failed to delete.';
+        this.deleteTarget = null;
+        this.cdr.detectChanges();
+      }
     });
   }
 }

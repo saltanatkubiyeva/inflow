@@ -1,4 +1,4 @@
-import { NgModule, Component, OnInit } from '@angular/core';
+import { NgModule, Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -275,7 +275,7 @@ export class CandidatesComponent implements OnInit {
     { value: 'rejected', label: 'Rejected' },
   ];
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private zone: NgZone, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.loadData();
@@ -284,10 +284,42 @@ export class CandidatesComponent implements OnInit {
   loadData(): void {
     this.loading = true;
     this.api.getCandidates().subscribe({
-      next: data => { this.candidates = data; this.applyFilters(); this.loading = false; },
-      error: () => { this.error = 'Failed to load candidates.'; this.loading = false; }
+      next: data => {
+        this.zone.run(() => {
+          try {
+            console.log('Received data:', data);
+            const normalized = Array.isArray(data) ? data : ((data as { results?: Candidate[] })?.results ?? []);
+            this.candidates = normalized;
+            this.applyFilters();
+          } finally {
+            this.loading = false;
+            this.cdr.detectChanges();
+          }
+        });
+      },
+      error: () => {
+        this.zone.run(() => {
+          this.error = 'Failed to load candidates.';
+          this.loading = false;
+          this.cdr.detectChanges();
+        });
+      }
     });
-    this.api.getVacancies().subscribe({ next: v => this.vacancies = v });
+    this.api.getVacancies().subscribe({
+      next: v => {
+        this.zone.run(() => {
+          console.log('Received data:', v);
+          this.vacancies = Array.isArray(v) ? v : ((v as { results?: Vacancy[] })?.results ?? []);
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => {
+        this.zone.run(() => {
+          this.vacancies = [];
+          this.cdr.detectChanges();
+        });
+      }
+    });
   }
 
   applyFilters(): void {
@@ -313,11 +345,16 @@ export class CandidatesComponent implements OnInit {
   changeStatus(c: Candidate, newStatus: CandidateStatus): void {
     this.api.updateCandidateStatus(c.id, newStatus).subscribe({
       next: updated => {
+        console.log('Received data:', updated);
         const idx = this.candidates.findIndex(x => x.id === c.id);
         if (idx !== -1) this.candidates[idx] = updated;
         this.applyFilters();
+        this.cdr.detectChanges();
       },
-      error: () => this.error = 'Failed to update status.'
+      error: () => {
+        this.error = 'Failed to update status.';
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -343,6 +380,7 @@ export class CandidatesComponent implements OnInit {
 
     req.subscribe({
       next: saved => {
+        console.log('Received data:', saved);
         if (this.editing) {
           const idx = this.candidates.findIndex(c => c.id === saved.id);
           if (idx !== -1) this.candidates[idx] = saved;
@@ -352,8 +390,13 @@ export class CandidatesComponent implements OnInit {
         this.applyFilters();
         this.saving = false;
         this.closeForm();
+        this.cdr.detectChanges();
       },
-      error: () => { this.formError = 'Failed to save. Check the form.'; this.saving = false; }
+      error: () => {
+        this.formError = 'Failed to save. Check the form.';
+        this.saving = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -363,11 +406,17 @@ export class CandidatesComponent implements OnInit {
     if (!this.deleteTarget) return;
     this.api.deleteCandidate(this.deleteTarget.id).subscribe({
       next: () => {
+        console.log('Received data:', { deletedId: this.deleteTarget?.id });
         this.candidates = this.candidates.filter(c => c.id !== this.deleteTarget!.id);
         this.applyFilters();
         this.deleteTarget = null;
+        this.cdr.detectChanges();
       },
-      error: () => { this.error = 'Failed to delete.'; this.deleteTarget = null; }
+      error: () => {
+        this.error = 'Failed to delete.';
+        this.deleteTarget = null;
+        this.cdr.detectChanges();
+      }
     });
   }
 }
