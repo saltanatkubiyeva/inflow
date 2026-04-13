@@ -1,0 +1,253 @@
+{
+  "info": {
+    "name": "Inflow API",
+    "description": "HR Interview Tracker — full API collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000/api" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const r = pm.response.json();",
+            "pm.collectionVariables.set('access_token', r.access);",
+            "pm.collectionVariables.set('refresh_token', r.refresh);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/login/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"username\": \"admin\", \"password\": \"admin123\"}" }
+          }
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/refresh/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"refresh\": \"{{refresh_token}}\"}" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/logout/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"refresh\": \"{{refresh_token}}\"}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get dashboard stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/dashboard/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Candidates",
+      "item": [
+        {
+          "name": "List candidates",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/candidates/",
+              "query": [
+                { "key": "status", "value": "new", "disabled": true },
+                { "key": "search", "value": "john", "disabled": true }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        },
+        {
+          "name": "Create candidate",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/candidates/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"first_name\": \"Aizat\",\n  \"last_name\": \"Bekova\",\n  \"email\": \"aizat.bekova@example.com\",\n  \"phone\": \"+7 701 234 5678\",\n  \"status\": \"new\",\n  \"source\": \"linkedin\",\n  \"priority\": \"high\",\n  \"notes\": \"Strong frontend background\"\n}" }
+          }
+        },
+        {
+          "name": "Get candidate",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/candidates/1/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        },
+        {
+          "name": "Update candidate",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/candidates/1/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"status\": \"screening\"}" }
+          }
+        },
+        {
+          "name": "Delete candidate",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/candidates/1/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vacancies",
+      "item": [
+        {
+          "name": "List vacancies",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/vacancies/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        },
+        {
+          "name": "Create vacancy",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/vacancies/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Frontend Developer\",\n  \"department\": \"Engineering\",\n  \"description\": \"We need a skilled Angular developer\",\n  \"requirements\": \"3+ years Angular, TypeScript\",\n  \"salary_min\": 300000,\n  \"salary_max\": 500000,\n  \"priority\": \"high\",\n  \"status\": \"open\"\n}" }
+          }
+        },
+        {
+          "name": "Update vacancy",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/vacancies/1/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"status\": \"paused\"}" }
+          }
+        },
+        {
+          "name": "Delete vacancy",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/vacancies/1/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Interviews",
+      "item": [
+        {
+          "name": "List interviews",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/interviews/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        },
+        {
+          "name": "Schedule interview",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/interviews/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"candidate\": 1,\n  \"interview_type\": \"technical\",\n  \"status\": \"scheduled\",\n  \"scheduled_at\": \"2026-04-20T14:00:00\",\n  \"duration_minutes\": 60,\n  \"location\": \"https://meet.google.com/abc-def-ghi\",\n  \"notes\": \"Prepare system design question\"\n}" }
+          }
+        },
+        {
+          "name": "Mark completed",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/interviews/1/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"status\": \"completed\"}" }
+          }
+        },
+        {
+          "name": "Delete interview",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/interviews/1/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Feedback",
+      "item": [
+        {
+          "name": "List feedback",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/feedback/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        },
+        {
+          "name": "Create feedback",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/feedback/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"interview\": 1,\n  \"candidate\": 1,\n  \"overall_rating\": 4,\n  \"technical_rating\": 5,\n  \"communication_rating\": 4,\n  \"cultural_fit_rating\": 4,\n  \"strengths\": \"Excellent TypeScript knowledge, great problem-solving\",\n  \"weaknesses\": \"Limited backend experience\",\n  \"comments\": \"Strong candidate, recommended for next round\",\n  \"recommendation\": \"yes\"\n}" }
+          }
+        },
+        {
+          "name": "Update feedback",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/feedback/1/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"recommendation\": \"strong_yes\"}" }
+          }
+        }
+      ]
+    }
+  ]
+}
