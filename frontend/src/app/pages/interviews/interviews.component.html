@@ -1,0 +1,172 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Interviews</h1>
+      <p class="page-subtitle">{{ interviews.length }} total</p>
+    </div>
+    <button class="btn-primary" (click)="openInterviewForm()">+ Schedule Interview</button>
+  </div>
+
+  @if (error) {
+  <div class="error-banner">{{ error }}</div>
+  }
+
+  <div class="filters-bar">
+    <select [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()">
+      <option value="">All statuses</option>
+      <option value="scheduled">Scheduled</option>
+      <option value="completed">Completed</option>
+      <option value="cancelled">Cancelled</option>
+      <option value="no_show">No show</option>
+    </select>
+  </div>
+
+  @if (loading) {
+  <div class="loading">Loading interviews…</div>
+  }
+
+  @if (!loading) {
+  <div class="interview-list">
+    @if (filtered.length === 0) {
+    <div class="empty-state">No interviews found.</div>
+    }
+
+    @for (i of filtered; track i.id) {
+    <div class="interview-card">
+      <div class="interview-card-date">
+        <span class="idate-day">{{ i.scheduled_at | date:'d' }}</span>
+        <span class="idate-month">{{ i.scheduled_at | date:'MMM' }}</span>
+        <span class="idate-time">{{ i.scheduled_at | date:'HH:mm' }}</span>
+      </div>
+      <div class="interview-card-body">
+        <div class="interview-card-top">
+          <h3>{{ i.candidate_name }}</h3>
+          <span class="badge" [class]="'badge-itype-' + i.interview_type">
+            {{ typeLabel(i.interview_type) }}
+          </span>
+        </div>
+        <div class="interview-card-meta">
+          @if (i.vacancy_title) { <span>📋 {{ i.vacancy_title }}</span> }
+          <span>⏱ {{ i.duration_minutes }} min</span>
+          @if (i.location) { <span>📍 {{ i.location }}</span> }
+          @if (i.interviewer_name) { <span>👤 {{ i.interviewer_name }}</span> }
+        </div>
+        @if (i.notes) { <p class="interview-notes">{{ i.notes }}</p> }
+      </div>
+      <div class="interview-card-actions">
+        <span class="badge" [class]="'badge-istatus-' + i.status">{{ i.status }}</span>
+        <div class="action-btns">
+          @if (i.status === 'scheduled') { <button class="btn-sm" (click)="markCompleted(i)">✓ Complete</button> }
+          @if (i.status === 'completed' && !i.has_feedback) { <button class="btn-sm accent" (click)="openFeedbackForm(i)">+ Feedback</button> }
+          @if (i.has_feedback) { <button class="btn-sm ghost" (click)="viewFeedback(i)">View feedback</button> }
+          <button class="btn-icon danger" (click)="deleteInterview(i)">✕</button>
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+  @if (showInterviewForm) {
+  <div class="modal-overlay" (click)="closeInterviewForm()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Schedule Interview</h2>
+        <button class="btn-icon" (click)="closeInterviewForm()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Candidate *</label>
+          <select [(ngModel)]="iForm.candidate" name="candidate">
+            <option [ngValue]="null">— Select candidate —</option>
+            @for (c of candidates; track c.id) { <option [value]="c.id">{{ c.full_name }}</option> }
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Interview type</label>
+            <select [(ngModel)]="iForm.interview_type" name="itype">
+              <option value="phone">Phone Screen</option>
+              <option value="technical">Technical</option>
+              <option value="hr">HR Interview</option>
+              <option value="final">Final Round</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Duration (minutes)</label>
+            <input type="number" [(ngModel)]="iForm.duration_minutes" name="dur" min="15" step="15" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date & Time *</label>
+            <input type="datetime-local" [(ngModel)]="iForm.scheduled_at" name="scheduled" />
+          </div>
+          <div class="form-group">
+            <label>Location / Link</label>
+            <input type="text" [(ngModel)]="iForm.location" name="location" placeholder="Room 3 or https://meet.google.com/…" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea [(ngModel)]="iForm.notes" name="notes" rows="2" placeholder="Preparation notes…"></textarea>
+        </div>
+        @if (iFormError) { <div class="form-error">{{ iFormError }}</div> }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" (click)="closeInterviewForm()">Cancel</button>
+        <button class="btn-primary" (click)="saveInterview()" [disabled]="iSaving">
+          {{ iSaving ? 'Scheduling…' : 'Schedule' }}
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  @if (showFeedbackForm) {
+  <div class="modal-overlay" (click)="closeFeedbackForm()">
+    <div class="modal modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Add Feedback — {{ feedbackInterview?.candidate_name }}</h2>
+        <button class="btn-icon" (click)="closeFeedbackForm()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Overall rating *</label>
+            <div class="star-row">
+              @for (n of [1,2,3,4,5]; track n) {
+              <button class="star-btn" [class.active]="(fForm?.overall_rating ?? 0) >= n" (click)="fForm.overall_rating = n">★</button>
+              }
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Recommendation *</label>
+            <select [(ngModel)]="fForm.recommendation" name="rec">
+              <option value="strong_yes">Strong Yes</option>
+              <option value="yes">Yes</option>
+              <option value="neutral">Neutral</option>
+              <option value="no">No</option>
+              <option value="strong_no">Strong No</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Technical (1–5)</label><input type="number" [(ngModel)]="fForm.technical_rating" name="tech" min="1" max="5" /></div>
+          <div class="form-group"><label>Communication (1–5)</label><input type="number" [(ngModel)]="fForm.communication_rating" name="comm" min="1" max="5" /></div>
+          <div class="form-group"><label>Cultural fit (1–5)</label><input type="number" [(ngModel)]="fForm.cultural_fit_rating" name="fit" min="1" max="5" /></div>
+        </div>
+        <div class="form-group"><label>Strengths</label><textarea [(ngModel)]="fForm.strengths" name="strengths" rows="2" placeholder="What stood out positively…"></textarea></div>
+        <div class="form-group"><label>Weaknesses</label><textarea [(ngModel)]="fForm.weaknesses" name="weaknesses" rows="2" placeholder="Areas of concern…"></textarea></div>
+        <div class="form-group"><label>Comments *</label><textarea [(ngModel)]="fForm.comments" name="comments" rows="3" placeholder="Overall impression…"></textarea></div>
+        @if (fFormError) { <div class="form-error">{{ fFormError }}</div> }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" (click)="closeFeedbackForm()">Cancel</button>
+        <button class="btn-primary" (click)="saveFeedback()" [disabled]="fSaving">{{ fSaving ? 'Saving…' : 'Submit feedback' }}</button>
+      </div>
+    </div>
+  </div>
+  }
+
+ 
