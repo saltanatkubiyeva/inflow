@@ -3,8 +3,6 @@ from django.contrib.auth.models import User
 from .models import Candidate, Vacancy, Interview, Feedback
 
 
-# ── Plain Serializers (serializers.Serializer) ──────────────────────────────
-
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(write_only=True, style={'input_type': 'password'})
@@ -28,8 +26,6 @@ class PipelineSummarySerializer(serializers.Serializer):
     hired = serializers.IntegerField()
     rejected = serializers.IntegerField()
 
-
-# ── ModelSerializers ─────────────────────────────────────────────────────────
 
 class UserShortSerializer(serializers.ModelSerializer):
     class Meta:

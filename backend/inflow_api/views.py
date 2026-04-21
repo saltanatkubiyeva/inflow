@@ -14,7 +14,6 @@ from .serializers import (
 )
 
 
-# ── FBV #1: Login ─────────────────────────────────────────────────────────────
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
@@ -34,7 +33,6 @@ def login_view(request):
     })
 
 
-# ── FBV #2: Dashboard stats ───────────────────────────────────────────────────
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_stats(request):
@@ -63,7 +61,6 @@ def dashboard_stats(request):
     })
 
 
-# ── CBV #1: Candidate list + create ──────────────────────────────────────────
 class CandidateListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -96,7 +93,6 @@ class CandidateListCreateView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-# ── CBV #2: Candidate detail (retrieve / update / delete) ────────────────────
 class CandidateDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -129,7 +125,6 @@ class CandidateDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# ── Vacancy views ─────────────────────────────────────────────────────────────
 class VacancyListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -175,7 +170,6 @@ class VacancyDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# ── Interview views ───────────────────────────────────────────────────────────
 class InterviewListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -214,7 +208,6 @@ class InterviewDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# ── Feedback views ────────────────────────────────────────────────────────────
 class FeedbackListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -251,7 +244,6 @@ class FeedbackDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# ── Logout ─────────────────────────────────────────────────────────────────────
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
